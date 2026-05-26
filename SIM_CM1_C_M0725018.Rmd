@@ -1,0 +1,423 @@
+---
+title: "Analisis Aktivitas Rental Film Berdasarkan Kota dan Kategori Film"
+author: "Raras Anindita Adi (M0725018 / C)"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<style>
+body {
+    background-color: #FFFAFA;
+}
+p {
+      font-family: Arial, Helvetica, sans-serif;
+      text-align: justify;
+}
+h1{
+    font-family: "Palatino Linotype", "Book Antiqua", Palantino, serif;
+    color: #2F4F4F;
+    border-bottom-style: solid;
+    border-bottom-color: #1A1A1A;
+    padding-bottom: 10px;
+}
+h2 {
+    font-family: "Arial Black", Gadget, sans-serif;
+    color: #104E8B;
+    border-bottom-style: solid;
+    border-bottom-color: #2F4F4F;
+    padding-bottom: 5px;
+}
+h4 {
+    font-family: Gerogia, serif;
+    color: #1E3A5F;
+    background-color: #F5F5F5;
+    border-left: 5px solid #68838B;
+    border-style: solid;
+    border-color: #68838B;
+    padding: 12px;
+    border-radius: 10px;
+}
+.analysis-box {
+    background: linear-gradient(
+        #F0FFFF,
+        #E0EEEE,
+        #C1CDCD);
+    border: 2px solid #CBD5E1;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+</style>
+
+
+<p>
+
+Analisis ini dilakukan untuk mengidentifikasi kota dan kategori film yang memiliki kontribusi tertinggi terhadap aktivitas rental film. Analisis ini juga dilakukan untuk menganalisis hubungan antara kota dengan kategori film serta tingkat popularitas film berdasarkan *rental rate*.
+
+Melalui analisis ini, pengguna diharapkan dapat memperoleh informasi mengenai pola preferensi kategori film pada berbagai kota sehingga dapat mendukung pengambilan keputusan bisnis dan strategi distribusi film yang lebih optimal.
+
+Analisis dilakukan menggunakan database 'Sakila' pada bahasa pemrograman MySQL yang dikoneksikan dengan R melalui *package* `DBI` dan `odbc`. Selain itu, digunakan juga *package* `ggplot2` untuk visualisasi data serta *package* `dplyr` untuk proses manipulasi dan agregasi data.
+
+</p>
+
+```{r, warning=FALSE, message=FALSE}
+library(DBI)
+library(odbc)
+library(ggplot2)
+library(dplyr)
+
+cont = dbConnect(odbc(),
+                 Driver = "MySQL ODBC 8.0 ANSI Driver",
+                 Server = "127.0.0.1",
+                 UID = "root",
+                 PWD = "LoveMyself_Rars0911",
+                 Port = 3306,
+                 Database = "sakila")
+dbListTables(cont)
+```
+
+
+<div class="analysis-box"> 
+
+<h2>
+Analisis 10 Kota dengan Aktivitas Rental Tertinggi
+</h2>
+
+<p>
+
+Analisis ini dilakukan untuk mengidentifikasi 10 kota dengan aktivitas rental film tertinggi berdasarkan jumlah transaksi rental pada *database Sakila*.
+
+Proses analisis dilakukan menggunakan *query* dalam MySQL dengan mengambil informasi kota dari tabel *city* serta menghitung total transaksi rental yang terjadi pada masing-masing kota melalui fungsi `COUNT()` dari tabel *rental*. Untuk memperoleh data tersebut, maka dilakukan penggabungan beberapa tabel menggunakan fungsi `JOIN` sehingga informasi kota dapat dihubungkan dengan data transaksi rental.
+
+Setelah proses *query* berhasil dilakukan, hasil *query* kemudian diimpor ke dalam RStudio melalui fungsi `dbGetQuery()`. Data hasil *query* MySQL tersebut selanjutnya disimpan dalam bentuk *dataframe* dengan nama **"Top 10 Rental per City"** yang memuat 10 kota dengan jumlah rental tertinggi beserta total transaksi rental pada masing-masing kota.
+
+</p>
+
+<h4>
+Syntax R
+</h4>
+
+```{r 1.1}
+`Top 10 Rental per City` = dbGetQuery(cont, "SELECT ci.city, COUNT(r.rental_id) AS total_rental FROM rental r
+JOIN customer c USING (customer_id)
+JOIN address a USING (address_id)
+JOIN city ci USING (city_id)
+GROUP BY ci.city
+ORDER BY total_rental DESC
+LIMIT 10;")
+`Top 10 Rental per City`
+```
+
+<h4>
+Visualisasi 10 Kota dengan Aktivitas Rental Tertinggi
+</h4>
+
+<p>
+
+Visualisasi kota dengan total rental tertinggi dilakukan menggunakan *package* `ggplot2` pada R. Jenis visualisasi yang digunakan adalah diagram batang (*bar plot*) karena data yang dianalisis berupa data kategorik.
+
+Berdasarkan visualisasi yang dihasilkan, kota-kota ditampilkan dalam bentuk diagram batang yang diurutkan berdasarkan total rental, mulai dari yang terendah hingga tertinggi. Pada visualisasi tersebut, sumbu x menunjukkan nama kota, sedangkan sumbu y menunjukkan total transaksi rental pada masing-masing kota.
+
+</p>
+
+```{r 1.2, fig.width=10, fig.height=6}
+`Top 10 Rental per City`$total_rental <- as.numeric(`Top 10 Rental per City`$total_rental)
+ggplot(`Top 10 Rental per City`,
+  aes(x = reorder(city, total_rental),
+    y = total_rental)) +
+  geom_bar(stat = "identity", fill = "#104E8B") +
+  labs(
+    title = "Top 10 Kota dengan Rental Film Terbanyak",
+    x = "Kota",
+    y = "Total Rental"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + theme_minimal() + theme(
+  plot.title = element_text(
+    size = 18,
+    hjust = 0.5,
+    margin = margin(b = 20)
+  ),
+
+  axis.line.x = element_line(color = "black"),
+  axis.line.y = element_line(color = "black"),
+
+  axis.title.x = element_text(
+    margin = margin(t = 15)
+  ),
+
+  axis.title.y = element_text(
+    margin = margin(r = 15)
+  )
+)
+```
+
+</div>
+
+
+
+
+
+<div class = "analysis-box">
+
+<h2>
+Analisis 10 Kategori Film dengan Aktivitas Rental Tertinggi
+</h2>
+
+<p>
+
+Analisis ini dilakukan untuk mengidentifikasi 10 kategori film dengan aktivitas rental film tertinggi berdasarkan jumlah transaksi rental pada *database Sakila*.
+
+Proses analisis dilakukan menggunakan *query* dalam MySQL dengan mengambil informasi kategori fim dari tabel *category* serta menghitung total transaksi rental yang terjadi pada masing-masing kategori melalui fungsi `COUNT()` dari tabel *rental*. Untuk memperoleh data tersebut, maka dilakukan penggabungan beberapa tabel menggunakan fungsi `JOIN` sehingga informasi kategori film dapat dihubungkan dengan data transaksi rental.
+
+Setelah proses *query* berhasil dilakukan, hasil *query* kemudian diimpor ke dalam RStudio melalui fungsi `dbGetQuery()`. Data hasil *query* MySQL tersebut selanjutnya disimpan dalam bentuk *dataframe* dengan nama **"Top 10 Rental per Film Category"** yang memuat 10 kategori film dengan jumlah rental tertinggi beserta total transaksi rental pada masing-masing kategori.
+
+</p>
+
+<h4>
+Syntax R
+</h4>
+
+```{r 2.1}
+`Top 10 Rental per Film Category` = dbGetQuery(cont,"SELECT cg.name category, COUNT(r.rental_id) AS total_rental
+FROM rental r
+JOIN inventory i USING (inventory_id)
+JOIN film_category fc USING (film_id)
+JOIN category cg USING (category_id)
+GROUP BY cg.name
+ORDER BY total_rental DESC
+LIMIT 10;")
+`Top 10 Rental per Film Category`
+```
+
+<h4>
+Visualisasi 10 Kategori Film dengan Aktivitas Rental Tertinggi
+</h4>
+
+<p>
+
+Visualisasi 10 kategori film dengan total rental tertinggi dilakukan menggunakan *package* `ggplot2` pada R. Jenis visualisasi yang digunakan adalah diagram batang (*bar plot*) karena data yang dianalisis berupa data kategorik.
+
+Berdasarkan visualisasi yang dihasilkan, kategori ditampilkan dalam bentuk diagram batang yang diurutkan berdasarkan total rental, mulai dari yang terendah hingga tertinggi. Pada visualisasi tersebut, sumbu x menunjukkan nama kategori, sedangkan sumbu y menunjukkan total transaksi rental pada masing-masing kategori film.
+
+</p>
+
+```{r 2.2, fig.width=10, fig.height=6}
+`Top 10 Rental per Film Category`$total_rental <- as.numeric(`Top 10 Rental per Film Category`$total_rental)
+ggplot(`Top 10 Rental per Film Category`,
+  aes(x = reorder(category, total_rental),
+    y = total_rental)) +
+  geom_bar(stat = "identity", fill = "#104E8B") +
+  labs(
+    title = "Top 10 Kategori Film dengan Rental Film Terbanyak",
+    x = "Kategori Film",
+    y = "Total Rental"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + theme_minimal() + theme(
+  plot.title = element_text(
+    size = 18,
+    hjust = 0.5,
+    margin = margin(b = 20)
+  ),
+
+  axis.line.x = element_line(color = "black"),
+  axis.line.y = element_line(color = "black"),
+
+  axis.title.x = element_text(
+    margin = margin(t = 15)
+  ),
+
+  axis.title.y = element_text(
+    margin = margin(r = 15)
+  )
+)
+```
+
+</div>
+
+
+
+
+
+<div class = "analysis-box">
+
+<h2>
+Analisis Hubungan Antara Kota dengan Kategori Film
+</h2>
+
+<p>
+
+Analisis ini dilakukan untuk mengetahui apakah terdapat hubungan antara variabel kota dengan variabel kategori film dalam aktivitas rental. Pemilihan kedua variabel tersebut didasarkan pada tema utama analisis, yaitu analisis rental berdasarkan kota serta analisis rental berdasarkan kategori film. Berdasarkan kedua analisis tersebut, selanjutnya ingin diketahui apakah terdapat korelasi antara kota tertentu dengan preferensi kategori film yang dirental.
+
+Analisis dilakukan dengan hipotesis sebagai berikut:
+<ul><li>
+$H_0$: Kota dan kategori film tidak memiliki hubungan 
+</li></ul>
+<ul><li>
+$H_1$: Terdapat hubungan antara kota dan kategori film
+</li></ul>
+
+Untuk melakukan pengujian hipotesis, terlebih dahulu dilakukan impor *query* dari MySQL yang menghubungkan informasi kota dari tabel *city* dengan informasi kategori film dari tabel *category* melalui fungsi `JOIN.` Hasil *query* tersebut kemudian diolah pada R untuk dilakukan uji chi-square menggunakan fungsi `chisq.test()` dengan rumus sebagai berikut:
+
+$X^2$ = $\sum\frac{(O_i - E_i)^2}{E_i}$
+
+Uji chi-square dipilih karena kedua variabel yang dianalisis, yaitu kota dan kategori film, merupakan data kategorik sehingga pengujian dilakukan untuk mengetahui ada atau tidaknya hubungan antara kedua variabel tersebut.
+
+</p>
+
+<h4>
+Syntax R
+</h4>
+
+```{r 3.1}
+`Film Category and City` <- dbGetQuery(cont, "SELECT 
+  ci.city,
+  cg.name category
+  FROM rental r
+  JOIN customer c USING (customer_id)
+  JOIN address a USING (address_id)
+  JOIN city ci USING (city_id)
+  JOIN inventory i USING (inventory_id)
+  JOIN film_category fc USING (film_id)
+  JOIN category cg USING (category_id)"
+)
+
+table1 <- table(`Film Category and City`$city, `Film Category and City`$category)
+chisq.test(table1)
+```
+
+<p>
+
+Berdasarkan hasil uji hipotesis tersebut, diperoleh nilai p-value sebesar 0,1157. Karena nilai p-value tersebut lebih besar dari taraf signifikansi 0,05, maka $H_0$ gagal ditolak. Hal ini menunjukkan bahwa tidak terdapat hubungan yang signifikan antara kota dengan kategori film dalam aktivitas rental *database* Sakila.
+
+</p>
+
+</div>
+
+
+
+
+
+<div class = "analysis-box">
+
+<h2>
+Analisis Kategori Film dengan *Revenue* Tertinggi pada Tiap Kota
+</h2>
+
+<p>
+
+Analisis ini dilakukan untuk mengetahui kategori film yang memberikan kontribusi pendapatan rental terbesar pada masing-masing kota. Pendapatan (*revenue*) diperoleh dari total pembayaran (*payment*) yang dilakukan pelanggan terhadap transaksi rental film.
+
+Untuk memperoleh informasi tersebut, dilakukan penggabungan beberapa tabel pada *database* Sakila menggunakan fungsi `JOIN` sehingga data kategori film, kota, dan pembayaran dapat saling terhubung. Setelah proses penggabungan data berhasil dilakukan, total *revenue* dihitung berdasarkan kategori film pada masing-masing kota menggunakan fungsi agregasi `SUM()`.
+
+Hasil *query* kemudian diimpor ke dalam R untuk divisualisasikan dan dianalisis lebih lanjut guna mengetahui kategori film dengan kontribusi pendapatan tertinggi pada tiap kota.
+
+</p>
+
+<h4>
+Syntax R
+</h4>
+
+```{r 4.1}
+revenue = dbGetQuery(cont, "SELECT
+    ci.city,
+    cg.name category,
+    SUM(p.amount) total_revenue
+FROM payment p
+JOIN rental r USING (rental_id)
+JOIN inventory i USING (inventory_id)
+JOIN film_category fc USING (film_id)
+JOIN category cg USING (category_id)
+JOIN customer c ON p.customer_id = c.customer_id
+JOIN address a USING (address_id)
+JOIN city ci USING (city_id)
+GROUP BY ci.city, cg.name
+ORDER BY total_revenue DESC;")
+library(dplyr)
+top_revenue <- revenue %>%
+  group_by(city, category) %>%
+  summarise(
+    total_revenue = sum(total_revenue),
+    .groups = "drop"
+  ) %>%
+  group_by(city) %>%
+  slice_max(total_revenue, n = 1) %>%
+  ungroup()
+
+head(revenue)
+```
+
+</div>
+
+
+
+
+
+<div class = "analysis-box">
+
+<h2>
+Analisis Korelasi antara Rental Rate dan Total Rental Film 
+</h2>
+
+<p>
+
+Analisis ini dilakukan untuk mengetahui hubungan antara *rental rate* dengan total rental film pada *database* Sakila. Dalam analisis ini, total rental digunakan sebagai indikator tingkat popularitas film, sedangkan *rental rate* menunjukkan biaya rental yang ditetapkan pada masing-masing film.
+
+Untuk memperoleh data yang dibutuhkan, dilakukan *query* pada MySQL dengan mengambil informasi judul film dan *rental rate* dari tabel film, kemudian menghitung total rental setiap film menggunakan fungsi agregasi `COUNT()`. Proses tersebut dilakukan melalui penggabungan tabel film, *inventory*, dan rental menggunakan fungsi `JOIN`.
+
+Setelah data berhasil diimpor ke dalam R menggunakan fungsi `dbGetQuery()`, analisis hubungan dilakukan menggunakan uji korelasi Spearman melalui fungsi `cor.test()` dengan parameter method = "spearman".
+
+Uji korelasi *spearman* dilakukan dengan hipotesis sebagai berikut:
+<ul><li>
+$H_0$: *Rental rate* dan total rental film tidak memiliki hubungan 
+</li></ul>
+<ul><li>
+$H_1$: Terdapat hubungan antara *rental rate* dengan total rental film
+</li></ul>
+
+Uji korelasi Spearman digunakan untuk mengetahui hubungan antara dua variabel numerik, yaitu rental rate dan total rental film, tanpa mengasumsikan distribusi data normal. Adapun rumus korelasi Spearman yang digunakan adalah sebagai berikut:
+
+$r_s$ = 1 - $\frac{6\sum d_i^2}{n(n^2-1)}$
+
+dengan:
+<ul><li>
+$r_s$ = koefisien korelasi Spearman
+</li></ul>
+<ul><li>
+$d_i$ = selisih peringkat pada pasangan data ke-i
+</li></ul>
+<ul><li>
+n = jumlah pasangan data
+</li></ul>
+
+</p>
+
+<h4>
+Syntax R
+</h4>
+
+```{r 5.1, message=FALSE, warning=FALSE}
+rate = dbGetQuery(cont, "SELECT
+    f.title,
+    f.rental_rate,
+    COUNT(r.rental_id) total_rental
+FROM film f
+JOIN inventory i USING (film_id)
+JOIN rental r USING (inventory_id)
+GROUP BY f.film_id;")
+
+cor.test(
+  rate$rental_rate,
+  rate$total_rental,
+  method = "spearman"
+)
+```
+
+<p>
+
+Berdasarkan hasil uji korelasi Spearman, diperoleh nilai *p-value* sebesar 0,0978. Karena nilai *p-value* lebih besar dari taraf signifikansi 0,05, maka $H_0$ gagal ditolak. Hal ini menunjukkan bahwa tidak terdapat hubungan yang signifikan antara *rental rate* dan total rental film pada *database* Sakila.
+
+Selain itu, diperoleh nilai koefisien korelasi Spearman sebesar −0,05. Nilai tersebut menunjukkan hubungan negatif yang sangat lemah antara *rental rate* dan total rental. Dengan demikian, tinggi-rendahnya *rental rate* tidak menunjukkan hubungan yang berarti terhadap total rental film.
+
+</p>
+
+</div>
